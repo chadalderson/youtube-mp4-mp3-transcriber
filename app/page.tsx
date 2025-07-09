@@ -1,103 +1,335 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Download, Upload, Youtube, FileAudio, AlertTriangle } from 'lucide-react';
+
+type ProcessingStep = 'idle' | 'downloading' | 'extracting' | 'transcribing' | 'complete' | 'error';
+
+interface TranscriptResult {
+  filename: string;
+  txtContent: string;
+  jsonContent: string;
+  txtDownloadUrl: string;
+  jsonDownloadUrl: string;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [activeTab, setActiveTab] = useState('youtube');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [processing, setProcessing] = useState<ProcessingStep>('idle');
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [result, setResult] = useState<TranscriptResult | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const getStepMessage = (step: ProcessingStep) => {
+    switch (step) {
+      case 'downloading': return 'Downloading YouTube video...';
+      case 'extracting': return 'Extracting audio...';
+      case 'transcribing': return 'Transcribing with Assembly AI...';
+      case 'complete': return 'Transcription complete!';
+      case 'error': return 'An error occurred';
+      default: return 'Ready to process';
+    }
+  };
+
+  const handleYouTubeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!youtubeUrl.trim()) return;
+
+    setProcessing('downloading');
+    setProgress(10);
+    setError(null);
+    setResult(null);
+
+    try {
+      // Download YouTube video
+      const downloadResponse = await fetch('/api/youtube-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: youtubeUrl }),
+      });
+
+      if (!downloadResponse.ok) {
+        const errorData = await downloadResponse.json();
+        throw new Error(errorData.message || 'Failed to download video');
+      }
+
+      const { audioPath, title } = await downloadResponse.json();
+      
+      setProcessing('transcribing');
+      setProgress(50);
+
+      // Transcribe audio
+      const transcribeResponse = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioPath, filename: title }),
+      });
+
+      if (!transcribeResponse.ok) {
+        const errorData = await transcribeResponse.json();
+        throw new Error(errorData.message || 'Failed to transcribe audio');
+      }
+
+      const transcriptData = await transcribeResponse.json();
+      setResult(transcriptData);
+      setProcessing('complete');
+      setProgress(100);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setErrorDetails(err instanceof Error ? err.stack || 'No additional details' : 'Unknown error');
+      setProcessing('error');
+      setProgress(0);
+    }
+  };
+
+  const handleFileUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile) return;
+
+    setProcessing('extracting');
+    setProgress(20);
+    setError(null);
+    setResult(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.message || 'Failed to upload file');
+      }
+
+      const { audioPath } = await uploadResponse.json();
+      
+      setProcessing('transcribing');
+      setProgress(50);
+
+      // Transcribe audio
+      const transcribeResponse = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioPath, filename: selectedFile.name }),
+      });
+
+      if (!transcribeResponse.ok) {
+        const errorData = await transcribeResponse.json();
+        throw new Error(errorData.message || 'Failed to transcribe audio');
+      }
+
+      const transcriptData = await transcribeResponse.json();
+      setResult(transcriptData);
+      setProcessing('complete');
+      setProgress(100);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setErrorDetails(err instanceof Error ? err.stack || 'No additional details' : 'Unknown error');
+      setProcessing('error');
+      setProgress(0);
+    }
+  };
+
+  const resetApp = () => {
+    setProcessing('idle');
+    setProgress(0);
+    setError(null);
+    setErrorDetails(null);
+    setResult(null);
+    setYoutubeUrl('');
+    setSelectedFile(null);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            YouTube Downloader & Transcription
+          </h1>
+          <p className="text-gray-600">
+            Download YouTube videos or upload audio files for AI transcription with speaker diarization
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileAudio className="h-5 w-5" />
+              Audio Processing & Transcription
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {processing !== 'idle' && processing !== 'complete' && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">{getStepMessage(processing)}</span>
+                  <Badge variant="outline">{progress}%</Badge>
+                </div>
+                <Progress value={progress} className="w-full" />
+              </div>
+            )}
+
+            {error && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="font-medium mb-2">{error}</div>
+                  <details className="text-xs">
+                    <summary className="cursor-pointer">View technical details</summary>
+                    <pre className="mt-2 whitespace-pre-wrap bg-gray-100 p-2 rounded text-xs">
+                      {errorDetails}
+                    </pre>
+                  </details>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {result && (
+              <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                <h3 className="font-semibold text-green-800 mb-3">Transcription Complete!</h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm font-medium">File: {result.filename}</Label>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button asChild size="sm">
+                      <a href={result.txtDownloadUrl} download>
+                        <Download className="h-4 w-4 mr-1" />
+                        Download TXT
+                      </a>
+                    </Button>
+                    <Button asChild size="sm" variant="outline">
+                      <a href={result.jsonDownloadUrl} download>
+                        <Download className="h-4 w-4 mr-1" />
+                        Download JSON
+                      </a>
+                    </Button>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Preview:</Label>
+                    <Textarea
+                      value={result.txtContent.substring(0, 500) + (result.txtContent.length > 500 ? '...' : '')}
+                      readOnly
+                      className="h-32 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="youtube" className="flex items-center gap-2">
+                  <Youtube className="h-4 w-4" />
+                  YouTube URL
+                </TabsTrigger>
+                <TabsTrigger value="mp4" className="flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  MP4 Upload
+                </TabsTrigger>
+                <TabsTrigger value="mp3" className="flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  MP3 Upload
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="youtube" className="space-y-4">
+                <form onSubmit={handleYouTubeSubmit} className="space-y-4">
+                  <div>
+                    <Label htmlFor="youtube-url">YouTube Video URL</Label>
+                    <Input
+                      id="youtube-url"
+                      type="url"
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      value={youtubeUrl}
+                      onChange={(e) => setYoutubeUrl(e.target.value)}
+                      disabled={processing !== 'idle'}
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={!youtubeUrl.trim() || processing !== 'idle'}
+                    className="w-full"
+                  >
+                    {processing === 'idle' ? 'Download & Transcribe' : 'Processing...'}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="mp4" className="space-y-4">
+                <form onSubmit={handleFileUpload} className="space-y-4">
+                  <div>
+                    <Label htmlFor="mp4-file">MP4 Video File</Label>
+                    <Input
+                      id="mp4-file"
+                      type="file"
+                      accept=".mp4,video/mp4"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      disabled={processing !== 'idle'}
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={!selectedFile || processing !== 'idle'}
+                    className="w-full"
+                  >
+                    {processing === 'idle' ? 'Upload & Transcribe' : 'Processing...'}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="mp3" className="space-y-4">
+                <form onSubmit={handleFileUpload} className="space-y-4">
+                  <div>
+                    <Label htmlFor="mp3-file">MP3 Audio File</Label>
+                    <Input
+                      id="mp3-file"
+                      type="file"
+                      accept=".mp3,audio/mp3"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      disabled={processing !== 'idle'}
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={!selectedFile || processing !== 'idle'}
+                    className="w-full"
+                  >
+                    {processing === 'idle' ? 'Upload & Transcribe' : 'Processing...'}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+
+            {(processing === 'complete' || processing === 'error') && (
+              <div className="mt-6 text-center">
+                <Button onClick={resetApp} variant="outline">
+                  Start New Transcription
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
