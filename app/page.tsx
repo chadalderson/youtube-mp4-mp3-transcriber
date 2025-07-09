@@ -240,15 +240,15 @@ export default function Home() {
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="youtube" className="flex items-center gap-2">
                   <Youtube className="h-4 w-4" />
-                  YouTube URL
+                  YouTube Video
                 </TabsTrigger>
                 <TabsTrigger value="mp4" className="flex items-center gap-2">
                   <Upload className="h-4 w-4" />
-                  MP4 Upload
+                  Upload Video
                 </TabsTrigger>
                 <TabsTrigger value="mp3" className="flex items-center gap-2">
                   <Upload className="h-4 w-4" />
-                  MP3 Upload
+                  Upload Audio
                 </TabsTrigger>
               </TabsList>
 
@@ -300,11 +300,11 @@ export default function Home() {
               <TabsContent value="mp3" className="space-y-4">
                 <form onSubmit={handleFileUpload} className="space-y-4">
                   <div>
-                    <Label htmlFor="mp3-file">MP3 Audio File</Label>
+                    <Label htmlFor="audio-file">Audio File</Label>
                     <Input
-                      id="mp3-file"
+                      id="audio-file"
                       type="file"
-                      accept=".mp3,audio/mp3"
+                      accept=".mp3,audio/mp3,.m4a,audio/m4a"
                       onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                       disabled={processing !== 'idle'}
                     />
