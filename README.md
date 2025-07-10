@@ -13,7 +13,7 @@ A Next.js web application that downloads YouTube videos and transcribes audio fi
 
 ## Demo
 
-![App Screenshot](https://via.placeholder.com/800x400?text=YouTube+Downloader+%26+Transcription+App)
+![App Demo](https://www.youtube.com/watch?v=-QX7yAXrN88)
 
 ## Prerequisites
 
