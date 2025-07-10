@@ -11,9 +11,11 @@ A Next.js web application that downloads YouTube videos and transcribes audio fi
 - 👁️ **Preview & Copy**: View transcripts in-app with copy-to-clipboard functionality
 - 🎨 **Modern UI**: Clean, responsive interface built with Shadcn, Tailwind CSS and Radix UI
 
-## Demo Video
+## Screenshot
 
-[App Demo](https://www.youtube.com/watch?v=-QX7yAXrN88)
+![App Preview](preview.png)
+
+
 
 ## Prerequisites
 
