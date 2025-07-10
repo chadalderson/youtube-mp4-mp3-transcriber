@@ -3,10 +3,9 @@ import path from 'path';
 import fs from 'fs';
 import { AssemblyAI } from 'assemblyai';
 
-const client = new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY || '' });
-
 export async function POST(req: NextRequest) {
   try {
+    const client = new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY || '' });
     const { audioPath, filename } = await req.json();
     if (!audioPath || !filename) {
       return NextResponse.json({ message: 'Missing audioPath or filename' }, { status: 400 });

@@ -22,6 +22,39 @@ interface TranscriptResult {
   jsonDownloadUrl: string;
 }
 
+function Dialog({ open, onClose, title, children }: { open: boolean, onClose: () => void, title: string, children: string }) {
+  const [copied, setCopied] = useState(false);
+  if (!open) return null;
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(children);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      setCopied(false);
+    }
+  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full p-6 relative">
+        <h2 className="text-lg font-semibold mb-4">{title}</h2>
+        <button onClick={onClose} className="absolute top-6 right-6 text-gray-500 hover:text-gray-700">&times;</button>
+        <div className="flex items-center mb-2">
+          <button
+            onClick={handleCopy}
+            className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 border border-gray-200 mr-2"
+          >
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+        </div>
+        <div className="overflow-auto max-h-96 whitespace-pre-wrap text-sm">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState('youtube');
   const [youtubeUrl, setYoutubeUrl] = useState('');
@@ -31,6 +64,9 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [result, setResult] = useState<TranscriptResult | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState('');
+  const [dialogContent, setDialogContent] = useState('');
 
   const getStepMessage = (step: ProcessingStep) => {
     switch (step) {
@@ -148,6 +184,24 @@ export default function Home() {
     }
   };
 
+  const handleViewFile = async (url: string, title: string) => {
+    setDialogTitle(title);
+    setDialogContent('Loading...');
+    setDialogOpen(true);
+    try {
+      // Extract the relative file path from the download URL
+      let filePath = url;
+      if (filePath.startsWith('/')) filePath = filePath.slice(1);
+      const apiUrl = `/api/files?path=${encodeURIComponent(filePath)}`;
+      const res = await fetch(apiUrl);
+      if (!res.ok) throw new Error('File not found');
+      const text = await res.text();
+      setDialogContent(text);
+    } catch (err) {
+      setDialogContent('Failed to load file.');
+    }
+  };
+
   const resetApp = () => {
     setProcessing('idle');
     setProgress(0);
@@ -156,6 +210,11 @@ export default function Home() {
     setResult(null);
     setYoutubeUrl('');
     setSelectedFile(null);
+  };
+
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    resetApp(); // Reset form when switching tabs
   };
 
   return (
@@ -211,17 +270,11 @@ export default function Home() {
                     <Label className="text-sm font-medium">File: {result.filename}</Label>
                   </div>
                   <div className="flex gap-2">
-                    <Button asChild size="sm">
-                      <a href={result.txtDownloadUrl} download>
-                        <Download className="h-4 w-4 mr-1" />
-                        Download TXT
-                      </a>
+                    <Button size="sm" onClick={() => handleViewFile(result.txtDownloadUrl, 'TXT Preview')}>
+                      View TXT
                     </Button>
-                    <Button asChild size="sm" variant="outline">
-                      <a href={result.jsonDownloadUrl} download>
-                        <Download className="h-4 w-4 mr-1" />
-                        Download JSON
-                      </a>
+                    <Button size="sm" variant="outline" onClick={() => handleViewFile(result.jsonDownloadUrl, 'JSON Preview')}>
+                      View JSON
                     </Button>
                   </div>
                   <div>
@@ -236,7 +289,7 @@ export default function Home() {
               </div>
             )}
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="youtube" className="flex items-center gap-2">
                   <Youtube className="h-4 w-4" />
@@ -330,6 +383,9 @@ export default function Home() {
           </CardContent>
         </Card>
       </div>
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} title={dialogTitle}>
+        {dialogContent}
+      </Dialog>
     </div>
   );
 }
