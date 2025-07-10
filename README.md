@@ -202,7 +202,7 @@ youtube-downloader/
 
 ## Technologies Used
 
-- **Frontend**: Next.js 15, React 19, TypeScript
+- **Frontend**: Next.js 15, React 19, TypeScript, Shadcn
 - **Styling**: Tailwind CSS, Radix UI components
 - **Audio Processing**: FFmpeg, fluent-ffmpeg
 - **YouTube Download**: yt-dlp-wrap
