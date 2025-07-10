@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
         
         // Clean up temp video file
         fs.unlinkSync(tempPath);
-      } catch (ffmpegError) {
+              } catch {
         // Try fallback with different approach
         try {
           console.log('Trying fallback audio extraction method...');

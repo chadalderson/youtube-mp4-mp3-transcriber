@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Download, Upload, Youtube, FileAudio, AlertTriangle } from 'lucide-react';
+import { Upload, Youtube, FileAudio, AlertTriangle } from 'lucide-react';
 
 type ProcessingStep = 'idle' | 'downloading' | 'extracting' | 'transcribing' | 'complete' | 'error';
 
@@ -30,7 +30,7 @@ function Dialog({ open, onClose, title, children }: { open: boolean, onClose: ()
       await navigator.clipboard.writeText(children);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch (err) {
+    } catch {
       setCopied(false);
     }
   };
@@ -123,9 +123,9 @@ export default function Home() {
       setProcessing('complete');
       setProgress(100);
 
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-      setErrorDetails(err instanceof Error ? err.stack || 'No additional details' : 'Unknown error');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An unexpected error occurred');
+      setErrorDetails(error instanceof Error ? error.stack || 'No additional details' : 'Unknown error');
       setProcessing('error');
       setProgress(0);
     }
@@ -176,9 +176,9 @@ export default function Home() {
       setProcessing('complete');
       setProgress(100);
 
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-      setErrorDetails(err instanceof Error ? err.stack || 'No additional details' : 'Unknown error');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An unexpected error occurred');
+      setErrorDetails(error instanceof Error ? error.stack || 'No additional details' : 'Unknown error');
       setProcessing('error');
       setProgress(0);
     }
@@ -197,7 +197,7 @@ export default function Home() {
       if (!res.ok) throw new Error('File not found');
       const text = await res.text();
       setDialogContent(text);
-    } catch (err) {
+    } catch {
       setDialogContent('Failed to load file.');
     }
   };
