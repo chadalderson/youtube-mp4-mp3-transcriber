@@ -13,7 +13,7 @@ A Next.js web application that downloads YouTube videos and transcribes audio fi
 
 ## Screenshot
 
-![App Preview](preview.png)
+![App Preview](public/preview.png)
 
 
 
