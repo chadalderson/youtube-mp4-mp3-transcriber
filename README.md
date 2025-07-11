@@ -1,11 +1,13 @@
 # YouTube Downloader & Transcription App
 
-A Next.js web application that downloads YouTube videos and transcribes audio files using AI. Features include YouTube video downloading, audio extraction from MP4 files, and AI-powered transcription with speaker diarization using AssemblyAI.
+A Next.js web application that downloads YouTube videos, processes podcast feeds, and transcribes audio files using AI. Features include YouTube video downloading, podcast RSS feed parsing, audio extraction from MP4 files, and AI-powered transcription with speaker diarization using AssemblyAI.
 
 ## Features
 
 - 🎥 **YouTube Video Download**: Download videos from YouTube and extract audio
+- 🎙️ **Podcast Transcription**: Parse RSS feeds and transcribe podcast episodes directly from URLs
 - 📁 **File Upload**: Upload MP4 videos or MP3/M4A audio files
+- 🔍 **Episode Search**: Search and filter podcast episodes with user-friendly duration display
 - 🤖 **AI Transcription**: Transcribe audio using AssemblyAI with speaker diarization
 - 📝 **Multiple Output Formats**: Get transcripts in both TXT and JSON formats
 - 👁️ **Preview & Copy**: View transcripts in-app with copy-to-clipboard functionality
@@ -105,6 +107,25 @@ choco install ffmpeg
 3. Click **"Upload & Transcribe"**
 4. The app will transcribe the audio directly
 
+### Podcast Transcription
+
+1. Select the **"Podcast"** tab
+2. Enter either:
+   - **RSS Feed URL** (e.g., `https://feeds.megaphone.fm/podcast-name`)
+   - **Direct Audio URL** (e.g., `https://example.com/episode.mp3`)
+3. For RSS feeds:
+   - Browse the episode list in the popup dialog
+   - Use the search bar to filter episodes by title or description
+   - Click on an episode to select and transcribe it
+4. For direct URLs: Transcription starts immediately
+5. The app streams audio directly to AssemblyAI (no local downloads)
+
+**Supported Audio Formats:**
+- MP3 (.mp3)
+- M4A (.m4a) 
+- WAV (.wav)
+- AAC (.aac)
+
 ### Viewing Transcripts
 
 - **TXT Format**: Plain text transcript with speaker labels
@@ -168,6 +189,42 @@ Transcribes audio files using AssemblyAI.
 }
 ```
 
+### POST `/api/podcast`
+Handles podcast RSS feed parsing and direct audio URL processing.
+
+**Request Body:**
+```json
+{
+  "url": "https://feeds.megaphone.fm/podcast-name"
+}
+```
+
+**Response (RSS Feed):**
+```json
+{
+  "type": "rss",
+  "episodes": [
+    {
+      "title": "Episode Title",
+      "description": "Episode description...",
+      "pubDate": "2024-01-01T00:00:00Z",
+      "audioUrl": "https://example.com/episode.mp3",
+      "duration": "3600",
+      "guid": "episode-guid"
+    }
+  ]
+}
+```
+
+**Response (Direct Audio):**
+```json
+{
+  "type": "audio",
+  "audioUrl": "https://example.com/episode.mp3",
+  "title": "episode"
+}
+```
+
 ### GET `/api/files`
 Serves files from the uploads directory.
 
@@ -181,6 +238,7 @@ youtube-downloader/
 ├── app/
 │   ├── api/
 │   │   ├── files/route.ts          # File serving endpoint
+│   │   ├── podcast/route.ts        # Podcast RSS parsing endpoint
 │   │   ├── transcribe/route.ts     # Transcription endpoint
 │   │   ├── upload/route.ts         # File upload endpoint
 │   │   └── youtube-download/route.ts # YouTube download endpoint
@@ -206,6 +264,7 @@ youtube-downloader/
 - **Styling**: Tailwind CSS, Radix UI components
 - **Audio Processing**: FFmpeg, fluent-ffmpeg
 - **YouTube Download**: yt-dlp-wrap
+- **Podcast Processing**: rss-parser
 - **Transcription**: AssemblyAI SDK
 - **Icons**: Lucide React
 
@@ -236,11 +295,18 @@ youtube-downloader/
    - Check your server's file upload limits
    - For very large files, consider using the YouTube download feature instead
 
+5. **Podcast RSS feed not loading**
+   - Verify the RSS feed URL is correct and accessible
+   - Some feeds may require authentication or have CORS restrictions
+   - Try using a direct audio URL instead
+
 ### Error Messages
 
 - **"Audio codec mp3 is not available"**: Reinstall FFmpeg with full codec support
 - **"File not found"**: Check file permissions and paths
 - **"Transcription failed"**: Verify AssemblyAI API key and account status
+- **"Access denied"**: The podcast file may be private or require authentication
+- **"No episodes found"**: The RSS feed may be empty or not contain audio episodes
 
 ## Contributing
 
