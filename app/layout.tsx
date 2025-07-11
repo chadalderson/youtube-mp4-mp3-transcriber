@@ -11,7 +11,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
 export const metadata: Metadata = {
   title: "Youtube, MP4 and MP3 Transcriber",
   description: "Something to transcribe youtube videos, mp4 and mp3 files.",

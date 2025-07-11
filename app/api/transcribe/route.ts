@@ -6,20 +6,31 @@ import { AssemblyAI } from 'assemblyai';
 export async function POST(req: NextRequest) {
   try {
     const client = new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY || '' });
-    const { audioPath, filename } = await req.json();
-    if (!audioPath || !filename) {
-      return NextResponse.json({ message: 'Missing audioPath or filename' }, { status: 400 });
+    const { audioPath, audioUrl, filename, isPodcast } = await req.json();
+    
+    if ((!audioPath && !audioUrl) || !filename) {
+      return NextResponse.json({ message: 'Missing audio source or filename' }, { status: 400 });
     }
 
-    // Get absolute path to audio file
-    const absAudioPath = path.join(process.cwd(), audioPath.replace(/^\//, ''));
-    if (!fs.existsSync(absAudioPath)) {
-      return NextResponse.json({ message: 'Audio file not found' }, { status: 404 });
+    let audioSource: string;
+    
+    if (isPodcast && audioUrl) {
+      // For podcasts, use the direct URL
+      audioSource = audioUrl;
+    } else if (audioPath) {
+      // For uploads, use the local file path
+      const absAudioPath = path.join(process.cwd(), audioPath.replace(/^\//, ''));
+      if (!fs.existsSync(absAudioPath)) {
+        return NextResponse.json({ message: 'Audio file not found' }, { status: 404 });
+      }
+      audioSource = absAudioPath;
+    } else {
+      return NextResponse.json({ message: 'No valid audio source provided' }, { status: 400 });
     }
 
     // Transcribe using AssemblyAI SDK (handles upload and polling)
     const transcript = await client.transcripts.transcribe({
-      audio: absAudioPath,
+      audio: audioSource,
       speaker_labels: true,
       auto_chapters: false,
     });
